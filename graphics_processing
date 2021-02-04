@@ -1,0 +1,113 @@
+import processing.serial.*;
+
+float penX;
+float penY;
+
+color blue = #255D8C;
+color yellow = #FCFAB6;
+color pink = #F44B79;
+color green = #7CBA96;
+color red = #FF0000;
+color backgrounds[] = {yellow, pink, blue, green, red};
+int background_counter = 1;
+
+PImage drawingImg;
+int smallPoint, bigPoint;
+int Y_AXIS = 25;
+int X_AXIS = 50;
+
+boolean clearScreen = true;
+
+Serial myPort;
+
+void setup() {
+  size(1500, 800);
+  makeNormalBackground();
+  defineDrawingImg();
+  drawingStartpoint();
+  definePort();
+}
+
+void draw() {
+  getPixels();
+  if (clearScreen) {
+    setOmbrey(0, 0, width, height, backgrounds[2], backgrounds[3], Y_AXIS);
+  clearScreen = false;
+}
+}
+
+void makeNormalBackground() {
+  background(255);
+  noStroke();
+  fill(green); 
+}
+
+void getPixels() {
+  float pointillize = map(penY, penX, width, smallPoint, bigPoint);
+  int x = int(random(800));
+  int y = int(random(600));
+  color pixelss = drawingImg.get(x,y);
+  fill(pixelss, 150); 
+  noStroke();
+  ellipse(penX, penY, pointillize, pointillize);
+  ellipse(penY, penX, pointillize, pointillize);
+}
+
+//Startpunkt for pen
+void drawingStartpoint() {
+  penX = width/2; 
+  penY = height/2; 
+}
+
+void defineDrawingImg() {
+  drawingImg = loadImage("russland.jpg");
+  smallPoint = 4;
+  bigPoint = 200;
+  imageMode(CENTER);
+}
+
+void definePort() {
+  myPort = new Serial(this, Serial.list()[1], 9600); //what Arduino port
+  myPort.bufferUntil('\n');
+}
+
+void serialEvent(Serial myPort) {
+  String inString = myPort.readString();
+  String pairs[] = split(inString, ';');
+  printArray(pairs);
+  
+  for (int i = 0; i < pairs.length; i++) {
+    String data[] = split(pairs[i], ':');
+    printArray(data);
+    if (data.length == 2) {
+      String name = trim(data[0]);
+      String value = trim(data[1]);
+      println("Navn:" + name + ", verdi:" + value);
+    //button
+    if (name.equals("tilt") && value.equals("1")) {
+        clearScreen = true;
+        println("Hei verden!");
+    }
+    //x-axis
+    if (name.equals("x")) {
+        int v = int(value);
+        penX = map(v, 0, 1023, 0, width);
+       }
+    //y-axis
+    if (name.equals("y")) {
+        int v = int(value);
+        penY = map(v, 0, 1023, 0, height);
+      }
+    }
+  }
+}
+
+void setOmbrey(int x, int y, float w, float h, color color1, color color2, int axis) {
+  noFill();
+  for (int i = y; i <= y+h; i++) {
+    float inter = map(i, y, y+h, 0, 1);
+    color c = lerpColor(color1, color2, inter);
+    stroke(c);
+    line(x, i, x+w, i);
+  }
+}
